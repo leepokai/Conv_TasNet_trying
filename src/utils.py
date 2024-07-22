@@ -6,6 +6,9 @@ import math
 import torch
 
 
+import torch
+import math
+
 def overlap_and_add(signal, frame_step):
     """Reconstructs a signal from a framed representation.
 
@@ -25,6 +28,7 @@ def overlap_and_add(signal, frame_step):
 
     Based on https://github.com/tensorflow/tensorflow/blob/r1.12/tensorflow/contrib/signal/python/ops/reconstruction_ops.py
     """
+    device = signal.device  # 获取输入张量的设备
     outer_dimensions = signal.size()[:-2]
     frames, frame_length = signal.size()[-2:]
 
@@ -36,14 +40,14 @@ def overlap_and_add(signal, frame_step):
 
     subframe_signal = signal.view(*outer_dimensions, -1, subframe_length)
 
-    frame = torch.arange(0, output_subframes).unfold(0, subframes_per_frame, subframe_step)
-    frame = signal.new_tensor(frame).long()  # signal may in GPU or CPU
+    frame = torch.arange(0, output_subframes, device=device).unfold(0, subframes_per_frame, subframe_step)
     frame = frame.contiguous().view(-1)
 
-    result = signal.new_zeros(*outer_dimensions, output_subframes, subframe_length)
+    result = torch.zeros(*outer_dimensions, output_subframes, subframe_length, device=device)
     result.index_add_(-2, frame, subframe_signal)
     result = result.view(*outer_dimensions, -1)
     return result
+
 
 
 def remove_pad(inputs, inputs_lengths):

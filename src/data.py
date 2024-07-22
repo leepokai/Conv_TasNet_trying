@@ -166,27 +166,31 @@ class EvalDataset(data.Dataset):
         Args:
             mix_dir: directory including mixture wav files
             mix_json: json file including mixture wav files
+            batch_size: size of each mini batch
+            sample_rate: sample rate of the audio files
         """
         super(EvalDataset, self).__init__()
-        assert mix_dir != None or mix_json != None
+        assert mix_dir is not None or mix_json is not None
         if mix_dir is not None:
             # Generate mix.json given mix_dir
-            preprocess_one_dir(mix_dir, mix_dir, 'mix',
-                               sample_rate=sample_rate)
+            preprocess_one_dir(mix_dir, mix_dir, 'mix', sample_rate=sample_rate)
             mix_json = os.path.join(mix_dir, 'mix.json')
+        
         with open(mix_json, 'r') as f:
-            mix_infos = json.load(f)
-        # sort it by #samples (impl bucket)
+            mix_infos = json.load(f)['mix']
+        
+        # Sort it by #samples (impl bucket)
         def sort(infos): return sorted(
-            infos, key=lambda info: int(info[1]), reverse=True)
+            infos, key=lambda info: int(info.get('length', 0)), reverse=True)
+
         sorted_mix_infos = sort(mix_infos)
-        # generate minibach infomations
+        
+        # Generate minibatch information
         minibatch = []
         start = 0
         while True:
             end = min(len(sorted_mix_infos), start + batch_size)
-            minibatch.append([sorted_mix_infos[start:end],
-                              sample_rate])
+            minibatch.append([sorted_mix_infos[start:end], sample_rate])
             if end == len(sorted_mix_infos):
                 break
             start = end
@@ -234,9 +238,12 @@ def _collate_fn_eval(batch):
 
 
 # ------------------------------ utils ------------------------------------
+import librosa
+import numpy as np
+
 def load_mixtures_and_sources(batch):
     """
-    Each info include wav path and wav duration.
+    Each info includes wav path and wav duration.
     Returns:
         mixtures: a list containing B items, each item is T np.ndarray
         sources: a list containing B items, each item is T x C np.ndarray
@@ -246,10 +253,10 @@ def load_mixtures_and_sources(batch):
     mix_infos, s1_infos, s2_infos, sample_rate, segment_len = batch
     # for each utterance
     for mix_info, s1_info, s2_info in zip(mix_infos, s1_infos, s2_infos):
-        mix_path = mix_info[0]
-        s1_path = s1_info[0]
-        s2_path = s2_info[0]
-        assert mix_info[1] == s1_info[1] and s1_info[1] == s2_info[1]
+        mix_path = mix_info['mix_path']
+        s1_path = s1_info['mix_path']
+        s2_path = s2_info['mix_path']
+        assert mix_info['length'] == s1_info['length'] and s1_info['length'] == s2_info['length']
         # read wav file
         mix, _ = librosa.load(mix_path, sr=sample_rate)
         s1, _ = librosa.load(s1_path, sr=sample_rate)
@@ -282,13 +289,12 @@ def load_mixtures(batch):
     mix_infos, sample_rate = batch
     # for each utterance
     for mix_info in mix_infos:
-        mix_path = mix_info[0]
+        mix_path = mix_info['mix_path']
         # read wav file
         mix, _ = librosa.load(mix_path, sr=sample_rate)
         mixtures.append(mix)
         filenames.append(mix_path)
     return mixtures, filenames
-
 
 def pad_list(xs, pad_value):
     n_batch = len(xs)

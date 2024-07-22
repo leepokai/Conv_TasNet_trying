@@ -5,7 +5,7 @@
 
 import argparse
 import os
-
+import soundfile as sf
 import librosa
 import torch
 
@@ -50,9 +50,8 @@ def separate(args):
     eval_loader =  EvalDataLoader(eval_dataset, batch_size=1)
     os.makedirs(args.out_dir, exist_ok=True)
 
-    def write(inputs, filename, sr=args.sample_rate):
-        librosa.output.write_wav(filename, inputs, sr)# norm=True)
-
+    def write(inputs, filename, sr):
+        sf.write(filename, inputs, sr)
     with torch.no_grad():
         for (i, data) in enumerate(eval_loader):
             # Get batch data
@@ -68,10 +67,10 @@ def separate(args):
             for i, filename in enumerate(filenames):
                 filename = os.path.join(args.out_dir,
                                         os.path.basename(filename).strip('.wav'))
-                write(mixture[i], filename + '.wav')
+                write(mixture[i], filename + '.wav', args.sample_rate)
                 C = flat_estimate[i].shape[0]
                 for c in range(C):
-                    write(flat_estimate[i][c], filename + '_s{}.wav'.format(c+1))
+                    write(flat_estimate[i][c], filename + '_s{}.wav'.format(c+1), args.sample_rate)
 
 
 if __name__ == '__main__':

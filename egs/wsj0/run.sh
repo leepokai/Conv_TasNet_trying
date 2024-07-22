@@ -10,7 +10,7 @@
 # After that, modify `data` and run from stage 2.
 wsj0_origin=/home/ktxu/workspace/data/CSR-I-WSJ0-LDC93S6A
 wsj0_wav=/home/ktxu/workspace/data/wsj0-wav/wsj0
-data=/home/ktxu/workspace/data/wsj-mix/2speakers/wav8k/min/
+data=/home/leepokai/Conv-TasNet/min/
 stage=1  # Modify this to control to start from which stage
 # -- END
 
@@ -69,9 +69,9 @@ tag="" # tag for managing experiments.
 
 ngpu=1  # always 1
 
-. utils/parse_options.sh || exit 1;
-. ./cmd.sh
-. ./path.sh
+. /home/leepokai/Conv-TasNet/egs/wsj0/utils/parse_options.sh || exit 1;
+. /home/leepokai/Conv-TasNet/egs/wsj0/utils/cmd.sh
+. /home/leepokai/Conv-TasNet/egs/wsj0/utils/path.sh
 
 
 if [ $stage -le 0 ]; then
@@ -95,7 +95,7 @@ fi
 if [ $stage -le 1 ]; then
   echo "Stage 1: Generating json files including wav path and duration"
   [ ! -d $dumpdir ] && mkdir $dumpdir
-  preprocess.py --in-dir $data --out-dir $dumpdir --sample-rate $sample_rate
+  python src/preprocess.py --in-dir $data --out-dir $dumpdir --sample-rate $sample_rate
 fi
 
 
@@ -107,9 +107,8 @@ fi
 
 if [ $stage -le 2 ]; then
   echo "Stage 2: Training"
-  ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
-    CUDA_VISIBLE_DEVICES="$id" \
-    train.py \
+  CUDA_VISIBLE_DEVICES="$id" \
+    python src/train.py \
     --train_dir $train_dir \
     --valid_dir $valid_dir \
     --sample_rate $sample_rate \
@@ -150,8 +149,8 @@ fi
 
 if [ $stage -le 3 ]; then
   echo "Stage 3: Evaluate separation performance"
-  ${decode_cmd} --gpu ${ngpu} ${expdir}/evaluate.log \
-    evaluate.py \
+  CUDA_VISIBLE_DEVICES="$id" \
+    python src/evaluate.py \
     --model_path ${expdir}/final.pth.tar \
     --data_dir $evaluate_dir \
     --cal_sdr $cal_sdr \
@@ -164,8 +163,8 @@ fi
 if [ $stage -le 4 ]; then
   echo "Stage 4: Separate speech using Conv-TasNet"
   separate_out_dir=${expdir}/separate
-  ${decode_cmd} --gpu ${ngpu} ${separate_out_dir}/separate.log \
-    separate.py \
+  CUDA_VISIBLE_DEVICES="$id" \
+    python src/separate.py \
     --model_path ${expdir}/final.pth.tar \
     --mix_json $separate_dir/mix.json \
     --out_dir ${separate_out_dir} \

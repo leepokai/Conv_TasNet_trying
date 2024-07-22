@@ -117,25 +117,27 @@ def main(args):
                        args.C, norm_type=args.norm_type, causal=args.causal,
                        mask_nonlinear=args.mask_nonlinear)
     print(model)
-    if args.use_cuda:
+    device = torch.device('cuda' if args.use_cuda and torch.cuda.is_available() else 'cpu')
+    if args.use_cuda and torch.cuda.is_available():
         model = torch.nn.DataParallel(model)
-        model.cuda()
+    model.to(device)
+
     # optimizer
     if args.optimizer == 'sgd':
-        optimizier = torch.optim.SGD(model.parameters(),
-                                     lr=args.lr,
-                                     momentum=args.momentum,
-                                     weight_decay=args.l2)
+        optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=args.lr,
+                                    momentum=args.momentum,
+                                    weight_decay=args.l2)
     elif args.optimizer == 'adam':
-        optimizier = torch.optim.Adam(model.parameters(),
-                                      lr=args.lr,
-                                      weight_decay=args.l2)
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=args.lr,
+                                     weight_decay=args.l2)
     else:
         print("Not support optimizer")
         return
 
     # solver
-    solver = Solver(data, model, optimizier, args)
+    solver = Solver(data, model, optimizer, args)
     solver.train()
 
 
