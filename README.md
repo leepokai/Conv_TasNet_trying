@@ -119,22 +119,4 @@ def separate(args):
                 write(flat_estimate[i][c].cpu().numpy(), filename + '_s{}.wav'.format(c+1), args.sample_rate)
 ```
 
-# Adding remove_pad Function Definition
-**File**: src/utils.py (Assumed)
 
-### New:
-```python
-def remove_pad(inputs, input_lengths):
-    """
-    Remove padding from inputs.
-    Args:
-        inputs (torch.Tensor): inputs with padding, size [B, C, T]
-        input_lengths (torch.Tensor): lengths of each input, size [B]
-    Returns:
-        list: A list of length B, each item is a torch.Tensor of size [C, T_i]
-    """
-    results = []
-    for i in range(inputs.size(0)):
-        results.append(inputs[i, :, :input_lengths[i]].squeeze(0))
-    return results
-```
